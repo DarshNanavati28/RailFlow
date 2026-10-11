@@ -194,8 +194,6 @@ Commands below use PowerShell on Windows, but equivalent commands work in other 
 
 ### 1. Clone the repository
 
-Replace the placeholder URL with the repository URL:
-
 ```powershell
 git clone <github.com/DarshNanavati28/RailFlow>
 cd RailFlow
@@ -441,11 +439,9 @@ RailFlow was developed collaboratively for the VORTEXA 3.0 P-03 challenge.
 
 Add team members and their profile links here:
 
-- **Project lead:** [Name](https://github.com/DarshNanavati28)
-- **Matching engine:** [Name](https://github.com/IRONMAN01-07)
-- **Frontend / backend:** [Name](https://github.com/moresanskruti10-dev)
-
-Replace these placeholders with the team's actual names and GitHub profiles before publishing.
+- **Project lead:** [Darsh Nanavati](https://github.com/DarshNanavati28)
+- **Matching engine:** [Adhiraj Patil](https://github.com/IRONMAN01-07)
+- **Frontend / backend:** [Sanskruti More](https://github.com/moresanskruti10-dev)
 
 ---
 
