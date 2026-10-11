@@ -1,8 +1,0 @@
-
-{
-  "python.analysis.extraPaths": [
-    "./Backend + AI",
-    "./Matching Engine"
-],
-"python-envs.defaultEnvManager": "ms-python.python:system"
-}
