@@ -315,7 +315,8 @@ export default function App() {
           <table>
             <thead>
               <tr>
-                <th>TRAIN ID</th>
+                <th>TRAIN</th>
+                <th>TRAIN NUMBER</th>
                 <th>ARRIVAL</th>
                 <th>DEPARTURE</th>
                 <th>PLATFORM</th>
@@ -330,15 +331,18 @@ export default function App() {
               ) : trains.length > 0 ? (
                 trains.map((train) => (
                   <tr key={train.train_id}>
-                    <td className="train-id">{train.train_id}</td>
-                    <td>{clock(train.arrival)}</td>
-                    <td>{clock(train.departure)}</td>
-                    <td>
-                      <span className="platform">
-                        {train.platform || "Unassigned"}
-                      </span>
-                    </td>
-                  </tr>
+  <td className="train-name">
+    {train.train_name || "Unknown train"}
+  </td>
+  <td className="train-id">{train.train_id}</td>
+  <td>{clock(train.arrival)}</td>
+  <td>{clock(train.departure)}</td>
+  <td>
+    <span className="platform">
+      {train.platform || "Unassigned"}
+    </span>
+  </td>
+</tr>
                 ))
               ) : (
                 <tr>

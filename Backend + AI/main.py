@@ -35,25 +35,36 @@ platforms = ["P1", "P2", "P3"]
 
 trains = [
     {
-        "train_id": "T101",
+        "train_id": "12025",
+        "train_name": "Pune Shatabdi Express",
         "arrival": 600,
         "departure": 615,
         "platform": "P1",
     },
     {
-        "train_id": "T102",
-        "arrival": 630,
-        "departure": 645,
+        "train_id": "12026",
+        "train_name": "Pune Shatabdi Express (Return)",
+        "arrival": 620,
+        "departure": 635,
         "platform": "P2",
     },
     {
-        "train_id": "T103",
-        "arrival": 650,
-        "departure": 665,
+        "train_id": "12009",
+        "train_name": "Mumbai Central–Ahmedabad Shatabdi",
+        "arrival": 640,
+        "departure": 655,
+        "platform": "P3",
+    },
+    {
+        "train_id": "12010",
+        "train_name": "Ahmedabad–Mumbai Central Shatabdi",
+        "arrival": 670,
+        "departure": 685,
         "platform": "P1",
     },
 ]
 
+history = []
 MINIMUM_GAP = 5
 closures = []
 history = []
