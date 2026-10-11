@@ -1,103 +1,93 @@
 # 🚆 RailFlow
+
 ### Railway Disruption & Platform Conflict Simulator
 
 **VORTEXA 3.0 · P-03 · Domain 6: Public Systems & Civic Technology**
 
-RailFlow is a railway scheduling and disruption simulation system developed for the P-03 problem statement at VORTEXA 3.0, a 12-hour student hackathon.
+RailFlow is an educational railway operations simulator that demonstrates how train-platform assignments can be generated, checked, and revised when disruptions occur. It combines a React dashboard, a FastAPI backend, and a deterministic constraint-based matching engine.
 
-It simulates a small fictional railway station, assigns trains to platforms under explicit constraints, detects scheduling conflicts, and provides a foundation for revising timetables when delays or platform closures occur.
+The prototype uses an illustrative timetable and a simulated station-yard view. It is designed for demonstrations, experimentation, and learning—not for real railway operations.
 
-The project combines a deterministic scheduling engine with a FastAPI backend. Its goal is to produce feasible timetable revisions, explain scheduling changes, and independently validate revised schedules before presenting them as valid.
-
-> **Current status:** Matching Engine and backend implemented and tested locally. Frontend and remaining challenge requirements are in progress.
+> **Project status:** The React/Vite frontend, FastAPI backend, and Python matching engine are present in the repository. Features and limitations below describe the prototype as implemented; not every advanced disruption-management requirement is complete.
 
 ---
 
-## 📌 Table of Contents
+## Contents
 
-- [The Challenge](#-the-challenge)
-- [Our Solution](#-our-solution)
+- [Overview](#-overview)
 - [Features](#-features)
 - [Architecture](#-architecture)
 - [Technology Stack](#-technology-stack)
-- [Project Structure](#-project-structure)
-- [Installation and Setup](#-installation-and-setup)
-- [API Endpoints](#-api-endpoints)
-- [Scheduling Logic](#-scheduling-logic)
+- [Repository Structure](#-repository-structure)
+- [Requirements](#-requirements)
+- [Getting Started](#-getting-started)
+- [API Reference](#-api-reference)
+- [Scheduling Model](#-scheduling-model)
 - [Testing](#-testing)
-- [Challenge Requirements](#-challenge-requirements)
-- [Limitations](#-limitations)
+- [Security Notes](#-security-notes)
+- [Known Limitations](#-known-limitations)
 - [Roadmap](#-roadmap)
-- [Team](#-team)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Disclaimer](#-disclaimer)
 
 ---
 
-## 🎯 The Challenge
+## 🎯 Overview
 
-Railway stations have a limited number of platforms. Each train occupies a platform from arrival until departure, and a minimum clearance gap may be required between consecutive occupancies.
+Railway stations have a finite number of platforms. Each train occupies its assigned platform between its arrival and departure, and a clearance interval may be required before another train can use the same platform. Delays and platform closures can make a previously valid allocation infeasible.
 
-A delay or platform closure can invalidate an existing timetable. Operators need to find a feasible revision quickly and ensure that no hidden conflicts remain.
+RailFlow models this problem with explicit constraints. The scheduling engine proposes platform assignments; the backend validates the resulting timetable before accepting a revision. The interface provides a dashboard for inspecting the simulation and submitting supported disruption actions.
 
-The VORTEXA 3.0 P-03 challenge requires a simulator that can:
+### Design principles
 
-- Assign trains to platforms while respecting occupancy and clearance constraints.
-- Detect overlapping or infeasible assignments and identify the affected trains and platforms.
-- Simulate delays of specified lengths and platform closures over specified periods.
-- Replan affected trains and record reasons for timetable changes.
-- Independently validate every revised timetable.
-- Use AI, where appropriate, to interpret free-text disruptions or explain scheduling trade-offs without allowing AI to decide platform assignments.
-
-**Scope:** RailFlow uses fictional station data. It does not depend on live railway data.
-
----
-
-## 💡 Our Solution
-
-RailFlow separates constraint-based scheduling from disruption handling and API orchestration.
-
-1. **Configure the station** — define platforms, trains, and the minimum clearance gap.
-2. **Generate assignments** — calculate platform assignments using deterministic scheduling logic.
-3. **Detect conflicts** — identify invalid inputs, overlapping occupancy, and infeasible schedules.
-4. **Simulate disruptions** — apply train delays or platform closures.
-5. **Replan** — search for valid platform assignments under the changed conditions.
-6. **Validate independently** — check the proposed timetable using a separate validation process.
-7. **Present the result** — expose assignments, conflicts, and validation results through the backend API.
-
-AI-assisted interpretation of natural-language disruption reports is a planned extension. Scheduling decisions remain governed by explicit constraints.
+- **Constraint-based decisions:** platform assignments are computed by deterministic scheduling logic, not by a generative AI model.
+- **Validation before acceptance:** revised schedules are checked for conflicts and invalid assignments.
+- **Explicit failure states:** invalid input and infeasible schedules should be reported rather than silently treated as successful.
+- **Simulation-first:** the included data is illustrative and does not represent a verified live railway timetable.
 
 ---
 
 ## ✨ Features
 
-### 🚉 Scheduling Engine
+### 🚉 Matching engine
 
-- Constraint-based platform assignment.
-- Configurable minimum clearance gap.
-- Required-platform constraints.
-- Duplicate train ID detection.
-- Invalid time and closure detection.
-- Infeasible schedule detection.
+- Assigns trains to available platforms.
+- Enforces a configurable minimum clearance gap.
+- Supports required-platform constraints.
+- Accounts for platform closures during train occupancy.
+- Detects duplicate train IDs and invalid times.
+- Reports when a valid assignment cannot be found.
+- Can prefer a train's current or requested platform when it remains feasible.
 
-### ⚠️ Disruption Handling
+### ⚠️ Disruption simulation
 
-- Simulated train delays.
-- Simulated platform closures.
-- Platform reassignment through the scheduling engine.
-- Disruption history.
-- Validation of revised schedules through the integrated workflow.
+The backend includes workflows for:
+- Applying a delay to a train.
+- Closing a platform over a specified time interval.
+- Re-running platform assignment after a supported disruption.
+- Recording disruption history in server memory.
+- Returning timetable, conflict, assignment, and validation information.
+
+The engine primarily reallocates platforms for the supplied arrival and departure times. It does **not** yet provide a complete railway-grade delay-propagation system that automatically shifts the times of connected trains.
+
+### 🖥️ Web dashboard
+
+- React and Vite frontend.
+- RailFlow dashboard with a tracking/schematic panel.
+- Disruption controls for supported scenarios.
+- Login screen for demo navigation.
+- Responsive CSS work for desktop and smaller screens.
+
+The login flow is currently a **frontend demonstration**, not production authentication. See [Security Notes](#-security-notes).
 
 ### 🔌 Backend API
 
-- FastAPI-based REST endpoints.
+- FastAPI REST service.
 - Pydantic request validation.
-- Interactive API documentation.
-- Timetable retrieval.
-- Delay and closure requests.
-- Validation and disruption-history endpoints.
-
-### 🛡️ Correctness First
-
-AI is not responsible for deciding platform assignments. Assignments must satisfy explicit scheduling rules, and a timetable that fails validation must not be reported as valid.
+- Interactive OpenAPI/Swagger documentation.
+- Timetable and health endpoints.
+- Disruption submission, replanning, validation, and history endpoints.
 
 ---
 
@@ -105,16 +95,16 @@ AI is not responsible for deciding platform assignments. Assignments must satisf
 
 ```mermaid
 flowchart TD
-    A[Frontend - Planned] --> B[FastAPI Backend]
-    B --> C[Disruption Handler]
-    C --> D[Engine Bridge]
-    D --> E[Matching Engine]
-    E --> F[Proposed Timetable]
-    F --> G[Independent Validator]
-    G --> H{Validation Result}
-    H -->|Valid| I[Accept Revision]
-    H -->|Invalid| J[Reject Revision]
-    I --> K[API Response and History]
+    A[React + Vite dashboard] -->|HTTP requests| B[FastAPI backend]
+    B --> C[Disruption workflow]
+    C --> D[Engine bridge]
+    D --> E[Python matching engine]
+    E --> F[Proposed platform assignments]
+    F --> G[Timetable validation]
+    G --> H{Valid and feasible?}
+    H -->|Yes| I[Apply revised timetable]
+    H -->|No| J[Return error or infeasible result]
+    I --> K[API response and in-memory history]
     J --> K
 ```
 
@@ -122,154 +112,211 @@ flowchart TD
 
 | Component | Responsibility |
 |---|---|
-| Matching Engine | Computes platform assignments |
-| Backend + AI | Handles API requests and disruption workflows |
-| Engine Bridge | Connects the backend to the scheduling engine |
-| Independent Validator | Checks timetable constraints separately from assignment generation |
-| Frontend | Planned interface for timetable visualization and disruption simulation |
+| `Frontend/` | React user interface, dashboard, tracking schematic, and disruption controls |
+| `Backend + AI/main.py` | FastAPI application, demo data, request handling, disruption workflow, and validation |
+| `Backend + AI/engine_bridge.py` | Adapter between the API and matching engine |
+| `Matching Engine/scheduler.py` | Deterministic platform assignment algorithm |
+| `Matching Engine/conflict_detector.py` | Conflict-detection logic |
+| `Matching Engine/disruption_handler.py` | Disruption-related scheduling utilities |
+| `Matching Engine/validator.py` | Validation utilities |
+| `Matching Engine/test_scheduler.py` | Scheduler tests |
+| `Matching Engine/test_disruption.py` | Disruption-related tests |
 
 ---
 
-## 🛠️ Technology Stack
+## 🧰 Technology Stack
 
-| Technology | Purpose |
+| Technology | Use |
 |---|---|
 | Python | Scheduling and backend logic |
-| FastAPI | REST API |
-| Pydantic | Request validation |
+| FastAPI | HTTP API |
+| Pydantic | Request-schema validation |
 | Uvicorn | ASGI development server |
+| React | Frontend UI |
+| Vite | Frontend development server and build tool |
+| JavaScript / JSX | Frontend behavior |
+| CSS | Styling and responsive layout |
 | Git and GitHub | Version control and collaboration |
-| Visual Studio Code | Development environment |
-| React + Vite | Planned frontend |
 
 ---
 
-## 📁 Project Structure
+## 📁 Repository Structure
 
 ```text
 RailFlow/
 ├── Backend + AI/
 │   ├── main.py
-│   ├── engine_bridge.py
-│   └── requirements.txt
-│
+│   └── engine_bridge.py
+├── Frontend/
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── public/
+│   └── src/
+│       ├── App.jsx
+│       ├── App.css
+│       ├── AuthGate.jsx
+│       ├── Login.jsx
+│       ├── login.css
+│       ├── DisruptionConsole.jsx
+│       ├── DisruptionConsole.css
+│       ├── TrackingPanel.jsx
+│       ├── TrackingPanel.css
+│       ├── index.css
+│       └── main.jsx
 ├── Matching Engine/
 │   ├── scheduler.py
+│   ├── conflict_detector.py
 │   ├── disruption_handler.py
+│   ├── validator.py
 │   ├── test_scheduler.py
 │   └── test_disruption.py
-│
+├── LICENSE
 └── README.md
 ```
 
-The backend and Matching Engine are maintained in separate directories. The engine bridge connects the two components.
+---
 
-*Adjust the file tree if your actual repository differs.*
+## ⚙️ Requirements
+
+Install the following before running the project:
+
+- **Python 3.10+** recommended.
+- **Node.js** compatible with the Vite version in `Frontend/package.json` (use a current supported LTS release).
+- npm, included with Node.js.
+- Git (optional if you downloaded the source ZIP).
+
+Commands below use PowerShell on Windows, but equivalent commands work in other shells with small path adjustments.
 
 ---
 
-## 🚀 Installation and Setup
-
-### Prerequisites
-
-- Python 3.10 or newer recommended
-- pip
-- Git
+## 🚀 Getting Started
 
 ### 1. Clone the repository
 
-```bash
+Replace the placeholder URL with the repository URL:
+
+```powershell
 git clone <YOUR_GITHUB_REPOSITORY_URL>
 cd RailFlow
 ```
 
-Replace the placeholder with your GitHub repository URL.
+If you downloaded a ZIP instead, extract it and open the extracted `RailFlow` folder in VS Code.
 
-### 2. Install dependencies
+### 2. Start the backend
 
-Open a terminal in `Backend + AI`:
+Open a terminal in the repository root, then run:
 
-```bash
+```powershell
+cd "Backend + AI"
 python -m pip install fastapi "uvicorn[standard]" pydantic
-```
-
-If the project includes a complete `requirements.txt`, install from it instead:
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-### 3. Start the backend
-
-From the `Backend + AI` directory:
-
-```bash
 python -m uvicorn main:app --reload
 ```
 
-The development server should start at:
+The API should be available at:
+
+- API root: `http://127.0.0.1:8000/`
+- Health check: `http://127.0.0.1:8000/health`
+- Interactive API docs: `http://127.0.0.1:8000/docs`
+- OpenAPI schema: `http://127.0.0.1:8000/openapi.json`
+
+Keep this terminal running.
+
+> **Important:** Start Uvicorn from `Backend + AI/` so the local `engine_bridge.py` import resolves as expected. If your team adds a `requirements.txt`, prefer installing dependencies with `python -m pip install -r requirements.txt`.
+
+### 3. Start the frontend
+
+Open a **second terminal** at the repository root:
+
+```powershell
+cd Frontend
+npm install
+npm run dev
+```
+
+Vite will print the local URL, normally:
 
 ```text
-http://127.0.0.1:8000
+http://localhost:5173
 ```
 
-### 4. Open the API documentation
+Open the URL shown in your terminal. Keep the frontend and backend terminals running together.
 
-Visit:
+### 4. Run the scheduler tests
 
-**http://127.0.0.1:8000/docs**
+Open another terminal from the repository root:
 
-Use the interactive documentation to inspect endpoints, submit requests, and review responses.
-
-Keep the server terminal open while testing.
-
-### 5. Run the scheduler tests
-
-Open a separate terminal:
-
-```bash
+```powershell
 cd "Matching Engine"
 python test_scheduler.py
-```
-
-If the disruption test file is present:
-
-```bash
 python test_disruption.py
 ```
 
-Run these commands from the directory containing the respective test files.
+Run each test file that is present in your checkout. A test file may need to be run from its own directory because the project uses local Python module imports.
+
+### 5. Build the frontend
+
+From `Frontend/`:
+
+```powershell
+npm run build
+```
+
+Vite writes the production build to `Frontend/dist/`. To preview that build locally:
+
+```powershell
+npm run preview
+```
+
+The preview command serves the frontend only; the API still needs to be running and reachable.
 
 ---
 
-## 🔌 API Endpoints
+## 🔌 API Reference
 
-The following endpoints are part of the current or planned integrated API. Confirm their presence in `/docs` before using them.
+The running API's `/docs` page is the authoritative reference for the request schemas and responses in your current checkout.
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| `GET` | `/` | Backend status |
-| `GET` | `/health` | Health check, if implemented |
-| `GET` | `/timetable` | Retrieve timetable and conflicts |
-| `POST` | `/schedule` | Calculate assignments, if implemented |
-| `POST` | `/replan` | Trigger replanning, if implemented |
-| `POST` | `/disruptions/delay` | Submit a train delay |
-| `POST` | `/disruptions/closure` | Submit a platform closure |
-| `POST` | `/validate` | Validate the timetable |
-| `GET` | `/history` | Retrieve disruption history |
+| `GET` | `/` | Returns backend status and the docs path |
+| `GET` | `/health` | Basic health check |
+| `GET` | `/timetable` | Returns demo trains, platforms, closures, conflicts, and validation status |
+| `POST` | `/replan` | Attempts to reassign platforms and validate the timetable |
+| `POST` | `/disruptions/delay` | Applies a delay to a train and attempts to replan |
+| `POST` | `/disruptions/closure` | Closes a platform for a time interval and attempts to replan |
+| `POST` | `/validate` | Validates the current timetable |
+| `GET` | `/history` | Returns disruption history recorded in memory |
 
-### Example: Train delay
+The backend code may include additional disruption models or endpoints in development. Check `/docs` for the endpoints actually exposed by the version you are running.
+
+### Example: health check
+
+```http
+GET http://127.0.0.1:8000/health
+```
+
+Expected shape:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### Example: apply a train delay
 
 `POST /disruptions/delay`
 
 ```json
 {
-  "train_id": "T101",
-  "delay_minutes": 20
+  "train_id": "12025",
+  "delay_minutes": 10
 }
 ```
 
-### Example: Platform closure
+The `train_id` must exist in the current demo timetable. Delay values must satisfy the request model's validation limits, and the resulting departure must not exceed the simulated day boundary.
+
+### Example: close a platform
 
 `POST /disruptions/closure`
 
@@ -281,159 +328,177 @@ The following endpoints are part of the current or planned integrated API. Confi
 }
 ```
 
-Times are expressed as minutes after midnight. For example, `600` represents 10:00 AM.
+Times are integer **minutes after midnight**: `600` means 10:00 AM and `640` means 10:40 AM. The end must be later than the start, and the platform must be configured.
 
-The exact request and response schemas should match the implementation in `main.py`.
-
----
-
-## 🧮 Scheduling Logic
-
-The scheduler uses deterministic constraint-based logic to allocate platforms.
-
-### Constraints
-
-- Train IDs must be unique.
-- Arrival and departure times must be valid.
-- Departure must occur after arrival.
-- Platform assignments must use configured platforms.
-- Required-platform constraints must be respected.
-- Platform occupancies must not overlap.
-- The minimum clearance gap must be satisfied.
-- Platform closures must be respected.
-- Infeasible schedules must be reported explicitly.
-
-### Scheduling outcomes
+### Scheduling response states
 
 | Status | Meaning |
 |---|---|
-| `feasible` | A valid assignment was found |
-| `infeasible` | No assignment satisfies the current constraints |
-| `invalid` | The input or configuration is invalid |
+| `feasible` | A valid platform assignment was found |
+| `infeasible` | No assignment satisfies the active constraints |
+| `invalid` | The scheduler input or configuration is invalid |
 
-The current engine assigns platforms for the supplied train times. Automatically shifting other trains' arrival and departure times to propagate or resolve delays is a separate scheduling capability that requires further development.
+An HTTP error can indicate that a requested disruption could not be applied without producing an infeasible timetable. Inspect the response body and `/docs` to understand the exact behavior of the running version.
+
+---
+
+## 🧮 Scheduling Model
+
+The scheduler treats each train's arrival and departure as a platform-occupancy interval.
+
+### Constraints
+
+1. Train IDs must be unique.
+2. Arrival must be non-negative.
+3. Departure must be later than arrival and no later than minute `1440`.
+4. The platform must be one of the configured platforms.
+5. Required-platform constraints must be respected.
+6. Two trains must not occupy the same platform at overlapping times.
+7. The configured clearance gap must be satisfied between successive occupancies.
+8. A train must not occupy a platform during a closure that overlaps its interval.
+
+### Clearance rule
+
+For two trains assigned to the same platform, the schedule is considered non-conflicting when one train's departure plus the required gap is no later than the other's arrival.
+
+The current scheduler uses a search-based assignment strategy and selects a train with the fewest available platform choices first. This is a constraint-solving heuristic, not a guarantee of globally optimal or minimum-change schedules.
+
+### What the scheduler does not guarantee
+
+- A globally optimal assignment.
+- The fewest possible platform changes.
+- Automatic propagation of delays across connected trains.
+- A feasible solution when all constraints cannot be satisfied.
+
+When a schedule is infeasible, the correct outcome is to report that no assignment was found under the current constraints—not to imply that the disruption has been resolved.
 
 ---
 
 ## 🧪 Testing
 
-The scheduler test suite covers nine test groups:
+The repository includes Python test files for the scheduler and disruption-related behavior.
 
-- Basic scheduling.
-- Platform conflicts and clearance gaps.
-- Platform closure constraints.
-- Required-platform constraints.
-- Unknown required platforms.
-- Invalid closures.
-- Duplicate train IDs.
-- Invalid train times.
-- Infeasible schedules.
+Run:
 
-**Reported result:** All nine scheduler test groups passed locally.
+```powershell
+cd "Matching Engine"
+python test_scheduler.py
+python test_disruption.py
+```
 
-The team has also reported passing initial backend API checks. These results establish progress, but further integrated testing is needed to demonstrate the complete disruption-replanning workflow.
+Use the test output from your own current checkout as the source of truth. Before a release or demonstration, also test the complete workflow through the API and frontend:
 
----
-
-## 📋 Challenge Requirements
-
-| Official P-03 requirement | Project status |
-|---|---|
-| Assign trains to platforms | Implemented |
-| Respect minimum clearance gaps | Implemented in scheduler |
-| Detect conflicts and infeasible assignments | Basic implementation and tests completed |
-| Support train delays | Backend workflow implemented; full recovery needs verification |
-| Support platform closures | Backend workflow implemented; full recovery needs verification |
-| Replan affected trains | Platform reassignment exists; comprehensive disruption recovery remains in progress |
-| Record reasons for timetable changes | Further implementation required |
-| Independently validate every revised timetable | Integration present; independence and full coverage require verification |
-| AI interpretation of free-text disruptions | Planned |
-| AI explanation of revision trade-offs | Planned |
-| Interactive frontend | Planned |
+- Load the timetable.
+- Apply a delay to a known train.
+- Apply a platform closure.
+- Check the returned assignments and validation status.
+- Submit a disruption that should be infeasible and verify that it is rejected cleanly.
+- Restart the backend and confirm which data resets.
 
 ---
 
-## ⚠️ Limitations
+## 🔐 Security Notes
 
-RailFlow is a prototype for a fictional railway station.
+RailFlow is currently a local development/demo prototype.
 
-- The frontend is still under development.
-- Timetable and history data may be stored in memory and reset when the server restarts.
-- The current scheduler works with fixed arrival and departure times.
-- Global optimization and minimum-change timetable revision are not guaranteed.
-- Detailed reasons for each timetable change require further work.
-- Natural-language AI disruption interpretation is not yet implemented.
-- End-to-end testing of the complete disruption workflow remains necessary.
-- No live railway data or operational railway infrastructure is used.
+- The login interface is **not a secure authentication system** if credentials are checked only in frontend code.
+- Never put passwords, API keys, or other secrets in React source files or public environment variables.
+- The timetable, disruption history, and closures are held in server memory in the current backend implementation and may reset on restart.
+- Before exposing the backend to the public internet, add real server-side authentication and authorization, review CORS settings, validate all inputs, configure HTTPS, and add suitable rate limiting and logging.
+- Do not use this prototype to control real trains, railway infrastructure, or safety-critical decisions.
+
+---
+
+## ⚠️ Known Limitations
+
+- The timetable is illustrative demo data, not an official or live railway timetable.
+- The station-yard tracking view is a simulation/schematic, not verified GPS tracking or an engineering map.
+- Backend state and disruption history are in memory and are not persistent.
+- The current scheduling model primarily reallocates platforms for supplied train times; full delay propagation is not implemented.
+- Minimum-change optimization and global optimality are not guaranteed.
+- Detailed explanations for every timetable change and AI-based natural-language disruption interpretation are not complete.
+- End-to-end testing should be expanded before treating the prototype as release-ready.
+- The demo login should not be considered production security.
 
 ---
 
 ## 🗺️ Roadmap
 
-### Phase 1 — Scheduling Engine
-
-- [x] Basic platform assignment
-- [x] Conflict detection
-- [x] Clearance-gap enforcement
-- [x] Platform-closure constraints
+### Core scheduling
+- [x] Constraint-based platform assignment
+- [x] Clearance-gap handling
+- [x] Platform closure constraints
 - [x] Required-platform constraints
-- [x] Nine scheduler test groups
+- [x] Invalid input and infeasible-state reporting
+- [ ] Broader edge-case and regression coverage
 
-### Phase 2 — Backend
+### Disruption management
+- [x] Delay request workflow
+- [x] Platform closure workflow
+- [x] Replanning attempt after supported disruptions
+- [x] Basic validation and in-memory history
+- [ ] Explain each platform change with a recorded reason
+- [ ] Delay propagation across connected services
+- [ ] Minimum-change optimization
+- [ ] Persistent storage and audit trail
 
-- [x] FastAPI backend
-- [x] Engine bridge
-- [x] Delay and closure endpoints
-- [x] Initial validation workflow
-- [x] Disruption history
+### Frontend and deployment
+- [x] React/Vite dashboard
+- [x] Disruption controls and tracking schematic
+- [ ] Full accessibility and mobile-device testing
+- [ ] Configurable API base URL for deployment
+- [ ] Production-grade authentication
+- [ ] Deployment and monitoring documentation
+- [ ] PWA/offline capabilities, if required
 
-### Phase 3 — Frontend
+### AI-assisted explanations
+- [ ] Parse free-text disruption descriptions into structured proposals
+- [ ] Explain trade-offs between feasible schedules
+- [ ] Keep all proposed assignments subject to deterministic constraints and validation
+- [ ] Provide a clear fallback when AI services are unavailable
 
-- [ ] Interactive timetable dashboard
-- [ ] Platform occupancy timeline
-- [ ] Delay and closure controls
-- [ ] Original-versus-revised timetable comparison
-- [ ] Conflict and validation indicators
-- [ ] Clear infeasibility and error messages
+---
 
-### Phase 4 — Advanced Replanning
+## 🤝 Contributing
 
-- [ ] Track affected trains
-- [ ] Record reasons for each assignment change
-- [ ] Explore delay propagation
-- [ ] Minimize unnecessary timetable changes
-- [ ] Expand independent validation and regression testing
+Contributions, bug reports, and suggestions are welcome.
 
-### Phase 5 — AI Integration
+1. Fork the repository or create a feature branch.
+2. Keep changes focused and describe the problem they solve.
+3. Run the relevant Python tests and build the frontend.
+4. Include steps to reproduce bugs and screenshots for UI changes where useful.
+5. Open a pull request with a concise summary and test results.
 
-- [ ] Interpret free-text disruption reports
-- [ ] Convert AI output into structured disruption proposals
-- [ ] Require validation before applying proposed changes
-- [ ] Explain trade-offs between feasible revisions
-- [ ] Provide a local fallback for the core demonstration
+For a team workflow, avoid committing generated folders such as `node_modules/`, Python `__pycache__/`, local secrets, or virtual environments.
 
 ---
 
 ## 👥 Team
 
-RailFlow is developed collaboratively across three workstreams.
+RailFlow was developed collaboratively for the VORTEXA 3.0 P-03 challenge.
 
-| Workstream | Responsibility |
-|---|---|
-| Matching Engine | Scheduling algorithm and tests |
-| Backend + AI | API integration, disruptions, and validation |
-| Frontend | Timetable visualization and user interaction |
+Add team members and their profile links here:
 
-Add your team members' names and GitHub profiles here.
+- **Project lead:** [Name](https://github.com/your-username)
+- **Matching engine:** [Name](https://github.com/your-username)
+- **Frontend / backend:** [Name](https://github.com/your-username)
 
----
-
-## 📄 Disclaimer
-
-RailFlow is an educational simulation developed for the VORTEXA 3.0 P-03 challenge. It is not designed or certified for operational railway control.
+Replace these placeholders with the team's actual names and GitHub profiles before publishing.
 
 ---
 
-**VORTEXA 3.0 · P-03 — RailFlow**
+## 📄 License
+
+RailFlow is released under the [MIT License](LICENSE).
+
+---
+
+## ⚖️ Disclaimer
+
+RailFlow is an educational simulation and hackathon prototype. It is provided “as is,” without warranties or guarantees. It is not certified or intended for operational railway control, live train dispatching, or other safety-critical use.
+
+---
+
+**RailFlow · VORTEXA 3.0 · P-03**
 
 *Simulate disruptions. Replan platform assignments. Validate every revision.*
