@@ -641,3 +641,79 @@ footer {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+.app-container {
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 28px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  background: #0b1220;
+  color: #f1f5f9;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -0.7px;
+}
+
+.brand span {
+  display: block;
+  margin-top: 5px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.user-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #aab6c8;
+  font-size: 13px;
+}
+
+.user-controls strong {
+  color: #f1f5f9;
+}
+
+.logout-button {
+  padding: 9px 14px;
+  border: 1px solid #334155;
+  border-radius: 9px;
+  background: #172438;
+  color: #f1f5f9;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.logout-button:hover {
+  background: #263852;
+  border-color: #64748b;
+}
+
+.app-content {
+  padding: 20px;
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px;
+  }
+
+  .user-controls {
+    flex-wrap: wrap;
+  }
+
+  .app-content {
+    padding: 12px;
+  }
+}
