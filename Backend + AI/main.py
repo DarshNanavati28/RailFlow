@@ -6,9 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-
 from typing import Literal
-from ai_assistant import interpret_disruption
 
 
 class DisruptionRequest(BaseModel):
@@ -613,19 +611,3 @@ def change_platform(req: DisruptionRequest):
         )
 
     return apply_disruption(req)
-
-class AIMessage(BaseModel):
-    message: str = Field(min_length=3, max_length=1000)
-
-
-@app.post("/ai/interpret-disruption")
-def ai_interpret_disruption(req: AIMessage):
-    try:
-        return interpret_disruption(req.message)
-    except Exception as exc:
-        print("AI interpretation error:", exc)
-        raise HTTPException(
-            status_code=502,
-            detail="AI interpretation failed. Check the backend terminal."
-        )
-
