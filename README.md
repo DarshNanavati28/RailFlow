@@ -197,7 +197,7 @@ Commands below use PowerShell on Windows, but equivalent commands work in other 
 Replace the placeholder URL with the repository URL:
 
 ```powershell
-git clone <YOUR_GITHUB_REPOSITORY_URL>
+git clone <github.com/DarshNanavati28/RailFlow>
 cd RailFlow
 ```
 
@@ -420,44 +420,6 @@ RailFlow is currently a local development/demo prototype.
 - End-to-end testing should be expanded before treating the prototype as release-ready.
 - The demo login should not be considered production security.
 
----
-
-## 🗺️ Roadmap
-
-### Core scheduling
-- [x] Constraint-based platform assignment
-- [x] Clearance-gap handling
-- [x] Platform closure constraints
-- [x] Required-platform constraints
-- [x] Invalid input and infeasible-state reporting
-- [ ] Broader edge-case and regression coverage
-
-### Disruption management
-- [x] Delay request workflow
-- [x] Platform closure workflow
-- [x] Replanning attempt after supported disruptions
-- [x] Basic validation and in-memory history
-- [ ] Explain each platform change with a recorded reason
-- [ ] Delay propagation across connected services
-- [ ] Minimum-change optimization
-- [ ] Persistent storage and audit trail
-
-### Frontend and deployment
-- [x] React/Vite dashboard
-- [x] Disruption controls and tracking schematic
-- [ ] Full accessibility and mobile-device testing
-- [ ] Configurable API base URL for deployment
-- [ ] Production-grade authentication
-- [ ] Deployment and monitoring documentation
-- [ ] PWA/offline capabilities, if required
-
-### AI-assisted explanations
-- [ ] Parse free-text disruption descriptions into structured proposals
-- [ ] Explain trade-offs between feasible schedules
-- [ ] Keep all proposed assignments subject to deterministic constraints and validation
-- [ ] Provide a clear fallback when AI services are unavailable
-
----
 
 ## 🤝 Contributing
 
@@ -479,9 +441,9 @@ RailFlow was developed collaboratively for the VORTEXA 3.0 P-03 challenge.
 
 Add team members and their profile links here:
 
-- **Project lead:** [Name](https://github.com/your-username)
-- **Matching engine:** [Name](https://github.com/your-username)
-- **Frontend / backend:** [Name](https://github.com/your-username)
+- **Project lead:** [Name](https://github.com/DarshNanavati28)
+- **Matching engine:** [Name](https://github.com/IRONMAN01-07)
+- **Frontend / backend:** [Name](https://github.com/moresanskruti10-dev)
 
 Replace these placeholders with the team's actual names and GitHub profiles before publishing.
 
