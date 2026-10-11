@@ -73,11 +73,19 @@ def schedule_trains(trains, platforms, gap=5, closures=None):
             if not conflict:
                 result.append(platform)
 
-        # Prefer the previous assignment where possible.
+        
+        # Prefer an explicitly requested platform first.
+        preferred = train.get("preferred_platform")
+        if preferred in result:
+            result.remove(preferred)
+            result.insert(0, preferred)
+
+        # Otherwise, prefer the train's existing platform.
         previous = train.get("current_platform")
         if previous in result:
             result.remove(previous)
             result.insert(0, previous)
+
 
         return result
 

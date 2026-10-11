@@ -1,10 +1,30 @@
 from copy import deepcopy
 import math
 import time
-
+from engine_bridge import replan, simulate_disruption
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from typing import Literal
+
+
+class DisruptionRequest(BaseModel):
+    type: Literal[
+        "delay",
+        "breakdown",
+        "cancellation",
+        "platform_closure",
+        "track_closure",
+        "signal_failure",
+        "platform_change",
+    ]
+    train_id: str | None = None
+    delay_minutes: int | None = None
+    extra_minutes: int | None = None
+    platform: str | None = None
+    start: int | None = None
+    end: int | None = None
 
 from engine_bridge import replan
 
@@ -48,7 +68,18 @@ trains = [
 history = []
 closures = []
 
+from copy import deepcopy
+from fastapi import HTTPException
+from pydantic import BaseModel, Field
 
+
+class BreakdownRequest(BaseModel):
+    train_id: str
+    extra_minutes: int = Field(gt=0, le=240)
+
+
+class CancelTrainRequest(BaseModel):
+    train_id: str
 class DelayRequest(BaseModel):
     train_id: str
     delay_minutes: int = Field(gt=0, le=1440)
@@ -303,14 +334,9 @@ def get_yard_position(train, index, platform_info, elapsed):
     # creep along the platform to animate the demo without implying live GPS.
     phase = ((elapsed / 36.0) + index * 0.173) % 1.0
     x = platform_info["x1"] + 70 + phase * (platform_info["x2"] - platform_info["x1"] - 140)
-    # Small local latitude/longitude interpolation along a schematic track.
-    lng = platform_info["lng"]
-    lat = platform_info["lat"]
     return {
         "x": round(x, 1),
         "y": platform_info["y"],
-        "lat": lat,
-        "lng": lng,
         "from_station": "Pune Junction",
         "to_station": "Pune Junction",
         "segment_progress": round(phase, 3),
@@ -364,5 +390,224 @@ def get_tracking():
             for i, p in enumerate(YARD_PLATFORMS)
         ],
         "trains": train_positions,
-        "disclaimer": "Illustrative Pune Junction yard simulation. Not live GPS, an official timetable, or an engineering track plan.",
+        "disclaimer": "Illustrative Pune Junction yard simulation. No geographic mapping or live GPS is used; this is not an official timetable or engineering track plan.",
     }
+
+@app.post("/conflicts/detect")
+def detect_conflicts():
+    """Inspect the current timetable without modifying it."""
+    current_conflicts = conflicts(trains)
+    validation = validate_timetable(trains, closures)
+
+    return {
+        "conflicts": current_conflicts,
+        "validation": validation,
+        "train_count": len(trains),
+    }
+
+
+@app.post("/disruptions/breakdown")
+def simulate_breakdown(req: BreakdownRequest):
+    """Simulate extra platform occupancy and replan."""
+    original_timetable = deepcopy(trains)
+
+    train = next(
+        (item for item in trains if item["train_id"] == req.train_id),
+        None,
+    )
+
+    if train is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Train not found.",
+        )
+
+    if train["departure"] + req.extra_minutes > 1440:
+        raise HTTPException(
+            status_code=422,
+            detail="Breakdown would extend beyond the demo day.",
+        )
+
+    before = train.copy()
+
+    # Simulate the train occupying its platform for longer.
+    train["departure"] += req.extra_minutes
+
+    result = replan_and_apply()
+
+    if result.get("status") != "feasible":
+        trains[:] = original_timetable
+
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": (
+                    "Breakdown applied provisionally, but no "
+                    "feasible platform assignment was found."
+                ),
+                "scheduler_result": result,
+            },
+        )
+
+    after = next(
+        item.copy()
+        for item in trains
+        if item["train_id"] == req.train_id
+    )
+
+    history.append({
+        "type": "breakdown",
+        "train_id": req.train_id,
+        "extra_minutes": req.extra_minutes,
+        "before": before,
+        "after": after,
+    })
+
+    return {
+        "message": "Breakdown simulated and timetable replanned.",
+        "train": after,
+        "assignments": result["assignments"],
+        "conflicts": conflicts(trains),
+        "validation": validate_timetable(trains, closures),
+    }
+
+
+@app.post("/disruptions/cancel")
+def cancel_train(req: CancelTrainRequest):
+    """Cancel a demo train and replan the remaining timetable."""
+    original_timetable = deepcopy(trains)
+
+    train = next(
+        (item for item in trains if item["train_id"] == req.train_id),
+        None,
+    )
+
+    if train is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Train not found.",
+        )
+
+    cancelled_train = train.copy()
+    trains[:] = [
+        item for item in trains
+        if item["train_id"] != req.train_id
+    ]
+
+    result = replan_and_apply()
+
+    if result.get("status") != "feasible":
+        trains[:] = original_timetable
+
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "Cancellation could not be replanned.",
+                "scheduler_result": result,
+            },
+        )
+
+    history.append({
+        "type": "cancellation",
+        "train_id": req.train_id,
+        "cancelled_train": cancelled_train,
+    })
+
+    return {
+        "message": "Train cancelled and remaining timetable replanned.",
+        "cancelled_train": cancelled_train,
+        "trains": trains,
+        "assignments": result["assignments"],
+        "conflicts": conflicts(trains),
+        "validation": validate_timetable(trains, closures),
+    }
+
+@app.post("/disruptions/apply")
+def apply_disruption(req: DisruptionRequest):
+    """
+    Simulate a disruption, find a feasible platform allocation,
+    independently validate it, and commit only if valid.
+    """
+    original_trains = deepcopy(trains)
+    original_closures = deepcopy(closures)
+
+    event = req.model_dump(exclude_none=True)
+
+    result = simulate_disruption(
+        original_trains,
+        platforms,
+        event,
+        gap=MINIMUM_GAP,
+        closures=original_closures,
+    )
+
+    if result.get("status") != "feasible":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "No feasible recovery plan was found.",
+                "result": result,
+            },
+        )
+
+    proposed_trains = result["updated_trains"]
+    proposed_closures = result["closures"]
+
+    # Independent validation before committing any changes.
+    validation = validate_timetable(
+        proposed_trains,
+        proposed_closures,
+    )
+
+    if not validation["valid"]:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": "Recovery plan failed independent validation.",
+                "errors": validation["errors"],
+            },
+        )
+
+    # Commit atomically after all checks succeed.
+    trains[:] = proposed_trains
+    closures[:] = proposed_closures
+
+    history.append({
+        "type": "disruption_recovery",
+        "disruption": event,
+        "assignments": result["assignments"],
+        "status": "committed",
+    })
+
+    return {
+        "message": "Disruption handled and recovery plan committed.",
+        "disruption": event,
+        "trains": trains,
+        "closures": closures,
+        "assignments": result["assignments"],
+        "conflicts": conflicts(trains),
+        "validation": validation,
+    }
+
+
+@app.get("/conflicts")
+def get_conflicts():
+    """Report operational conflicts without changing the timetable."""
+    return {
+        "conflicts": conflicts(trains),
+        "validation": validate_timetable(trains, closures),
+        "train_count": len(trains),
+        "platform_count": len(platforms),
+    }
+
+
+@app.post("/disruptions/platform-change")
+def change_platform(req: DisruptionRequest):
+    """Explicit endpoint for a manual platform reassignment."""
+    if req.type != "platform_change":
+        raise HTTPException(
+            status_code=422,
+            detail="Use type='platform_change'.",
+        )
+
+    return apply_disruption(req)

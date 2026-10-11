@@ -1,0 +1,181 @@
+
+.disruption-console {
+  margin: 28px 0;
+  color: #e8edf5;
+}
+
+.disruption-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.disruption-header h2 {
+  margin: 5px 0 8px;
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+}
+
+.disruption-header p,
+.disruption-card p {
+  color: #aab6c8;
+  line-height: 1.6;
+}
+
+.disruption-eyebrow {
+  color: #55c7ff !important;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.simulation-badge {
+  flex-shrink: 0;
+  padding: 7px 10px;
+  border: 1px solid #397f67;
+  border-radius: 999px;
+  background: #12372e;
+  color: #82efc2;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.disruption-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.disruption-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #2a384c;
+  border-radius: 16px;
+  background: #101a29;
+}
+
+.disruption-card h3 {
+  margin: 0 0 8px;
+}
+
+.disruption-card p {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+}
+
+.disruption-card label {
+  display: block;
+  margin: 14px 0 7px;
+  color: #d8e2f0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.disruption-card input,
+.disruption-card select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #35455c;
+  border-radius: 9px;
+  background: #0a1220;
+  color: #f3f6fb;
+  font: inherit;
+}
+
+.disruption-card button {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1px solid #4b91ff;
+  border-radius: 9px;
+  background: #2463cf;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.disruption-card button:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.disruption-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.disruption-card .secondary-button {
+  border-color: #43556f;
+  background: #202e42;
+}
+
+.disruption-card .danger-button {
+  border-color: #a94652;
+  background: #8f2937;
+}
+
+.disruption-message {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+
+.success-message {
+  border: 1px solid #286e51;
+  background: #102e25;
+  color: #9bf0c9;
+}
+
+.error-message {
+  border: 1px solid #8f3944;
+  background: #351b25;
+  color: #ffb5bf;
+}
+
+.conflict-results {
+  margin-top: 16px;
+}
+
+.conflict-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.conflict-heading span {
+  color: #9eb0c8;
+  font-size: 0.8rem;
+}
+
+.conflict-results ul {
+  padding-left: 22px;
+}
+
+.conflict-results li {
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+  color: #ffcf9c;
+}
+
+.disruption-disclaimer {
+  margin-top: 16px;
+  color: #8797ad;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 700px) {
+  .disruption-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .disruption-header {
+    flex-direction: column;
+  }
+}

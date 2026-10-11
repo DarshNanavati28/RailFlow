@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  CircleMarker,
-  MapContainer,
-  Popup,
-  TileLayer,
-  Tooltip,
-  useMap,
-} from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 import "./TrackingPanel.css";
+import DisruptionConsole from "./DisruptionConsole.jsx";
 
 const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
@@ -16,14 +8,6 @@ function formatClock(minutes) {
   if (minutes == null || !Number.isFinite(Number(minutes))) return "--:--";
   const n = ((Number(minutes) % 1440) + 1440) % 1440;
   return `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
-}
-
-function FitMap({ center }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, map.getZoom(), { animate: false });
-  }, [center[0], center[1], map]);
-  return null;
 }
 
 function YardSchematic({ data, selectedId, onSelect }) {
@@ -100,64 +84,9 @@ function YardSchematic({ data, selectedId, onSelect }) {
   );
 }
 
-function GeographicYardMap({ data, selectedId, onSelect }) {
-  const trains = data.trains || [];
-  const selectedTrain = trains.find((train) => train.train_id === selectedId);
-  const center = selectedTrain?.position
-    ? [selectedTrain.position.lat, selectedTrain.position.lng]
-    : [18.5285, 73.8744];
-
-  return (
-    <div className="geo-map">
-      <MapContainer center={center} zoom={16} scrollWheelZoom className="leaflet-map">
-        <FitMap center={center} />
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <CircleMarker
-          center={[data.station?.lat ?? 18.5285, data.station?.lng ?? 73.8744]}
-          radius={9}
-          pathOptions={{ color: "#ffffff", weight: 2, fillColor: "#0f172a", fillOpacity: 1 }}
-        >
-          <Tooltip permanent>Pune Junction</Tooltip>
-        </CircleMarker>
-        {trains.map((train) => {
-          if (!train.position) return null;
-          const selected = train.train_id === selectedId;
-          return (
-            <CircleMarker
-              key={train.train_id}
-              center={[train.position.lat, train.position.lng]}
-              radius={selected ? 9 : 6}
-              pathOptions={{
-                color: "#ffffff",
-                weight: 2,
-                fillColor: train.route_color || "#60a5fa",
-                fillOpacity: 1,
-              }}
-              eventHandlers={{ click: () => onSelect(train.train_id) }}
-            >
-              <Tooltip permanent={selected}>{train.train_id} · {train.platform || "Unassigned"}</Tooltip>
-              <Popup>
-                <strong>{train.train_name}</strong><br />
-                Train {train.train_id}<br />
-                Platform: {train.platform || "Unassigned"}<br />
-                Simulation only<br />
-                <button type="button" onClick={() => onSelect(train.train_id)}>View train details</button>
-              </Popup>
-            </CircleMarker>
-          );
-        })}
-      </MapContainer>
-    </div>
-  );
-}
-
 export default function TrackingPanel() {
   const [data, setData] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
-  const [view, setView] = useState("schematic");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdate, setLastUpdate] = useState(null);
@@ -198,6 +127,7 @@ export default function TrackingPanel() {
   );
 
   return (
+    <>
     <section className="tracking-panel">
       <div className="tracking-header">
         <div>
@@ -215,10 +145,6 @@ export default function TrackingPanel() {
       </div>
 
       <div className="tracking-toolbar">
-        <div className="view-switch" aria-label="Station view">
-          <button type="button" className={view === "schematic" ? "active" : ""} onClick={() => setView("schematic")}>Station yard</button>
-          <button type="button" className={view === "geographic" ? "active" : ""} onClick={() => setView("geographic")}>Geographic</button>
-        </div>
         <div className="tracking-updated">
           {lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : "Waiting for tracking data"}
         </div>
@@ -236,14 +162,12 @@ export default function TrackingPanel() {
           {loading && !data ? (
             <div className="tracking-placeholder">Loading Pune Junction yard…</div>
           ) : data ? (
-            view === "schematic"
-              ? <YardSchematic data={data} selectedId={selectedId} onSelect={setSelectedId} />
-              : <GeographicYardMap data={data} selectedId={selectedId} onSelect={setSelectedId} />
+            <YardSchematic data={data} selectedId={selectedId} onSelect={setSelectedId} />
           ) : (
             <div className="tracking-placeholder">Start the FastAPI backend to load train positions.</div>
           )}
           <p className="tracking-disclaimer">
-            Illustrative single-station simulation near Pune Junction. Not live GPS, an official timetable, or an engineering track plan.
+            Illustrative single-station yard simulation. Not an official timetable or an engineering track plan.
           </p>
         </div>
 
@@ -294,5 +218,7 @@ export default function TrackingPanel() {
         ))}
       </div>
     </section>
+    <DisruptionConsole />
+    </>
   );
 }

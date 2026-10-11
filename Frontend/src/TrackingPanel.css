@@ -584,3 +584,82 @@
     transition: none;
   }
 }
+
+
+/* Connected yard / turnout interaction */
+.yard-title {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 2px 4px 12px;
+}
+.yard-title strong {
+  color: #e7f1ff;
+  font-size: 13px;
+  letter-spacing: .45px;
+}
+.yard-title span {
+  color: #7f9bbd;
+  font-size: 10px;
+  letter-spacing: .6px;
+}
+.yard-schematic svg { max-height: 500px; }
+.train-marker { cursor: pointer; outline: none; }
+.train-marker-moving { filter: drop-shadow(0 0 7px rgba(56, 189, 248, .9)); }
+.moving-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: moving-ring-pulse 900ms ease-out infinite;
+}
+@keyframes moving-ring-pulse {
+  0% { opacity: .95; transform: scale(.75); }
+  100% { opacity: 0; transform: scale(1.45); }
+}
+.route-overlay path {
+  stroke-dasharray: 8 7;
+  animation: route-dash 650ms linear infinite;
+}
+@keyframes route-dash { to { stroke-dashoffset: -30; } }
+.legend-route { background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
+.movement-message {
+  margin: 0 0 14px;
+  padding: 11px 13px;
+  border: 1px solid #24516b;
+  border-radius: 8px;
+  color: #bae6fd;
+  background: #0c2030;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.platform-route-label {
+  display: block;
+  margin-top: 18px;
+  margin-bottom: 7px;
+  color: #9aacc3;
+  font-size: 11px;
+  font-weight: 600;
+}
+.platform-route-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.platform-route-controls select {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid #33445d;
+  border-radius: 7px;
+  color: #e7edf7;
+  background: #101c30;
+  font: inherit;
+  font-size: 12px;
+}
+.route-button:disabled,
+.tracking-refresh:disabled,
+.tracked-train-row:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+@media (prefers-reduced-motion: reduce) {
+  .moving-ring, .route-overlay path { animation: none; }
+}
