@@ -1,130 +1,546 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 
-const API = "http://127.0.0.1:8000";
+const API =
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+
+const PLATFORMS = ["P1", "P2", "P3"];
 
 function clock(minutes) {
-if (minutes == null) return "--:--";
-return "${String(Math.floor(minutes / 60) % 24).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}";
+  if (minutes == null || !Number.isFinite(Number(minutes))) {
+    return "--:--";
+  }
+
+  const normalized = ((Number(minutes) % 1440) + 1440) % 1440;
+  const hours = Math.floor(normalized / 60);
+  const mins = normalized % 60;
+
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
+async function apiRequest(path, options = {}) {
+  let response;
+
+  try {
+    response = await fetch(`${API}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
+  } catch {
+    throw new Error(
+      `Cannot connect to ${API}. Start FastAPI and check CORS settings.`
+    );
+  }
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const detail = data.detail;
+    const message =
+      typeof detail === "string"
+        ? detail
+        : Array.isArray(detail)
+          ? detail.map((item) => item.msg || JSON.stringify(item)).join("; ")
+          : detail
+            ? JSON.stringify(detail)
+            : `Request failed: HTTP ${response.status}`;
+
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+function SectionHeading({ eyebrow, title, children }) {
+  return (
+    <div className="section-head">
+      <div>
+        <p className="eyebrow">{eyebrow}</p>
+        <h3>{title}</h3>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function MetricCard({ label, value, description, tone = "" }) {
+  return (
+    <article className="stat">
+      <span>{label}</span>
+      <strong className={tone}>{value}</strong>
+      <small>{description}</small>
+    </article>
+  );
 }
 
 export default function App() {
-const [trains, setTrains] = useState([]);
-const [conflicts, setConflicts] = useState([]);
-const [history, setHistory] = useState([]);
-const [trainId, setTrainId] = useState("T101");
-const [delay, setDelay] = useState(20);
-const [platform, setPlatform] = useState("P1");
-const [start, setStart] = useState(600);
-const [end, setEnd] = useState(640);
-const [message, setMessage] = useState("");
+  const [trains, setTrains] = useState([]);
+  const [conflicts, setConflicts] = useState([]);
+  const [history, setHistory] = useState([]);
 
-async function request(path, options = {}) {
-const response = await fetch(API + path, {
-...options,
-headers: { "Content-Type": "application/json", ...options.headers },
-});
-const data = await response.json();
-if (!response.ok) throw new Error(data.detail || "Request failed");
-return data;
-}
+  const [trainId, setTrainId] = useState("T101");
+  const [delay, setDelay] = useState(20);
+  const [platform, setPlatform] = useState("P1");
+  const [start, setStart] = useState(600);
+  const [end, setEnd] = useState(640);
 
-async function refresh() {
-try {
-const [table, records] = await Promise.all([
-request("/timetable"),
-request("/history"),
-]);
-setTrains(table.trains || []);
-setConflicts(table.conflicts || []);
-setHistory(records.history || []);
-setMessage("");
-} catch {
-setMessage("Backend unavailable. Start the FastAPI server.");
-}
-}
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("info");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [backendOnline, setBackendOnline] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-useEffect(() => {
-refresh();
-}, []);
+  const refresh = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
 
-async function submit(path, body) {
-try {
-const result = await request(path, {
-method: "POST",
-body: JSON.stringify(body),
-});
-setMessage(result.message || "Request completed.");
-await refresh();
-} catch (error) {
-setMessage(error.message);
-}
-}
+    try {
+      const [table, records] = await Promise.all([
+        apiRequest("/timetable"),
+        apiRequest("/history"),
+      ]);
 
-async function validate() {
-try {
-const result = await request("/validate", { method: "POST" });
-setConflicts(result.errors || []);
-setMessage(result.valid ? "No platform conflicts detected." : "Found ${result.errors.length} conflict(s).");
-} catch (error) {
-setMessage(error.message);
-}
-}
+      setTrains(Array.isArray(table.trains) ? table.trains : []);
+      setConflicts(Array.isArray(table.conflicts) ? table.conflicts : []);
+      setHistory(Array.isArray(records.history) ? records.history : []);
 
-return (
-<main className="app">
-<header className="topbar">
-<div className="brand"><div className="logo">R</div><div><h1>RAILFLOW</h1><p>Railway operations control</p></div></div>
-<span className="status">● SIMULATION CONTROL</span>
-</header>
+      setBackendOnline(true);
+      setLastUpdated(new Date());
+      setMessage("");
+      setMessageType("info");
+    } catch (error) {
+      setBackendOnline(false);
+      setMessage(error.message);
+      setMessageType("error");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  <section className="hero">
-    <div><p className="eyebrow">DISPATCH CENTER / LIVE SIMULATION</p><h2>Keep every train<br />on the right track.</h2><p>Monitor platform assignments, simulate disruptions, and validate timetable conflicts.</p></div>
-    <div className="hero-icon">🚆</div>
-  </section>
+  useEffect(() => {
+    refresh();
 
-  {message && <div className="notice">{message}<button className="secondary" onClick={() => setMessage("")}>Dismiss</button></div>}
+    const handleFocus = () => refresh(false);
+    window.addEventListener("focus", handleFocus);
 
-  <section className="stats">
-    <article className="stat"><span>Total trains</span><strong>{trains.length}</strong><small>Current timetable</small></article>
-    <article className="stat"><span>Platforms</span><strong>03</strong><small>P1 · P2 · P3</small></article>
-    <article className="stat"><span>Conflicts</span><strong className={conflicts.length ? "bad" : "good"}>{conflicts.length}</strong><small>Backend validation</small></article>
-  </section>
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [refresh]);
 
-  <section className="panel">
-    <div className="section-head"><div><p className="eyebrow">OPERATIONS</p><h3>Train timetable</h3></div><button className="secondary" onClick={refresh}>↻ Refresh</button></div>
-    <div className="table-wrap"><table><thead><tr><th>TRAIN</th><th>ARRIVAL</th><th>DEPARTURE</th><th>PLATFORM</th></tr></thead><tbody>
-      {trains.map(t => <tr key={t.train_id}><td className="train-id">{t.train_id}</td><td>{clock(t.arrival)}</td><td>{clock(t.departure)}</td><td><span className="platform">{t.platform}</span></td></tr>)}
-      {!trains.length && <tr><td colSpan="4">No trains loaded. Check backend.</td></tr>}
-    </tbody></table></div>
-  </section>
+  useEffect(() => {
+    if (
+      trains.length > 0 &&
+      !trains.some((train) => train.train_id === trainId)
+    ) {
+      setTrainId(trains[0].train_id);
+    }
+  }, [trains, trainId]);
 
-  <section className="actions-grid">
-    <article className="panel"><p className="eyebrow">SCENARIO 01</p><h3>Simulate train delay</h3><p className="description">Move a train's arrival and departure later.</p>
-      <label>Train ID</label><select value={trainId} onChange={e => setTrainId(e.target.value)}>{trains.map(t => <option key={t.train_id}>{t.train_id}</option>)}</select>
-      <label>Delay (minutes)</label><input type="number" min="1" max="1440" value={delay} onChange={e => setDelay(Number(e.target.value))}/>
-      <button disabled={!trains.length || delay < 1} onClick={() => submit("/disruptions/delay", { train_id: trainId, delay_minutes: delay })}>Apply delay →</button>
-    </article>
+  async function submit(path, body, successMessage) {
+    if (busy) return;
 
-    <article className="panel"><p className="eyebrow">SCENARIO 02</p><h3>Platform closure</h3><p className="description">Check which trains overlap a closure window.</p>
-      <label>Platform</label><select value={platform} onChange={e => setPlatform(e.target.value)}>{["P1", "P2", "P3"].map(p => <option key={p}>{p}</option>)}</select>
-      <label>Start (minutes after midnight)</label><input type="number" min="0" max="1439" value={start} onChange={e => setStart(Number(e.target.value))}/>
-      <label>End (minutes after midnight)</label><input type="number" min="1" max="1440" value={end} onChange={e => setEnd(Number(e.target.value))}/>
-      <button disabled={end <= start} onClick={() => submit("/disruptions/closure", { platform, start, end })}>Check closure →</button>
-    </article>
-  </section>
+    setBusy(true);
+    setMessage("");
 
-  <section className="actions-grid">
-    <article className="panel"><p className="eyebrow">SAFETY CHECK</p><h3>Schedule validation</h3><p className="description">Check trains for platform clearance conflicts.</p>
-      {conflicts.length > 0 && <ul className="conflict-list">{conflicts.map((c, i) => <li key={i}>{typeof c === "string" ? c : JSON.stringify(c)}</li>)}</ul>}
-      <button className="secondary" onClick={validate}>Validate timetable</button>
-    </article>
-    <article className="panel"><p className="eyebrow">AUDIT LOG</p><h3>Disruption history</h3>
-      {!history.length ? <p className="description">No disruptions recorded this session.</p> : <ul className="history-list">{[...history].reverse().map((item, i) => <li key={i}><strong>{item.type.toUpperCase()}</strong><span>{item.train_id || item.platform}</span><small>{item.minutes ? `${item.minutes} min delay` : "Closure recorded"}</small></li>)}</ul>}
-    </article>
-  </section>
-  <footer>RAILFLOW · HACKATHON SIMULATION · NOT FOR LIVE RAILWAY OPERATIONS</footer>
-</main>
+    try {
+      const result = await apiRequest(path, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
 
-);
+      setMessage(result.message || successMessage);
+      setMessageType("success");
+
+      await refresh(false);
+    } catch (error) {
+      setMessage(error.message);
+      setMessageType("error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function validate() {
+    if (busy) return;
+
+    setBusy(true);
+    setMessage("");
+
+    try {
+      const result = await apiRequest("/validate", {
+        method: "POST",
+      });
+
+      const errors = Array.isArray(result.errors)
+        ? result.errors
+        : Array.isArray(result.conflicts)
+          ? result.conflicts
+          : [];
+
+      setConflicts(errors);
+
+      const valid =
+        typeof result.valid === "boolean"
+          ? result.valid
+          : errors.length === 0;
+
+      setMessage(
+        valid
+          ? "Validation completed. No conflicts reported."
+          : `Validation completed. ${errors.length} issue(s) reported.`
+      );
+      setMessageType(valid ? "success" : "error");
+
+      await refresh(false);
+    } catch (error) {
+      setMessage(error.message);
+      setMessageType("error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const delayValid =
+    Number.isFinite(delay) && delay >= 1 && delay <= 1440;
+
+  const closureValid =
+    Number.isFinite(start) &&
+    Number.isFinite(end) &&
+    start >= 0 &&
+    end <= 1440 &&
+    end > start;
+
+  return (
+    <main className="app">
+      <header className="topbar">
+        <div className="brand">
+          <div className="logo">R</div>
+          <div>
+            <h1>RAILFLOW</h1>
+            <p>Railway operations control</p>
+          </div>
+        </div>
+
+        <div
+          className={`status ${backendOnline ? "online" : "offline"}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span>{backendOnline ? "●" : "○"}</span>
+          {backendOnline ? "BACKEND CONNECTED" : "BACKEND OFFLINE"}
+        </div>
+      </header>
+
+      <section className="hero">
+        <div>
+          <p className="eyebrow">DISPATCH CENTER / LIVE SIMULATION</p>
+          <h2>
+            Keep every train
+            <br />
+            on the right track.
+          </h2>
+          <p className="hero-description">
+            Monitor platform assignments, simulate disruptions, and validate
+            timetable conflicts from one control desk.
+          </p>
+        </div>
+
+        <div className="hero-icon" aria-hidden="true">
+          🚆
+        </div>
+      </section>
+
+      {message && (
+        <div
+          className={`notice ${messageType}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span>{message}</span>
+          <button
+            type="button"
+            className="secondary compact"
+            onClick={() => setMessage("")}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      <section className="stats" aria-label="Operations overview">
+        <MetricCard
+          label="Total trains"
+          value={loading ? "…" : trains.length}
+          description="Trains in current timetable"
+        />
+
+        <MetricCard
+          label="Platforms"
+          value="03"
+          description="P1 · P2 · P3"
+        />
+
+        <MetricCard
+          label="Reported conflicts"
+          value={loading ? "…" : conflicts.length}
+          description="Latest backend validation data"
+          tone={conflicts.length ? "bad" : "good"}
+        />
+      </section>
+
+      <section className="panel">
+        <SectionHeading eyebrow="OPERATIONS" title="Train timetable">
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => refresh()}
+            disabled={loading}
+          >
+            {loading ? "Loading…" : "↻ Refresh"}
+          </button>
+        </SectionHeading>
+
+        <div className="table-meta">
+          <span>Scheduled trains and platform assignments</span>
+          <span>
+            {lastUpdated
+              ? `Updated ${lastUpdated.toLocaleTimeString()}`
+              : "Waiting for backend"}
+          </span>
+        </div>
+
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>TRAIN ID</th>
+                <th>ARRIVAL</th>
+                <th>DEPARTURE</th>
+                <th>PLATFORM</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {loading && trains.length === 0 ? (
+                <tr>
+                  <td colSpan={4}>Loading timetable…</td>
+                </tr>
+              ) : trains.length > 0 ? (
+                trains.map((train) => (
+                  <tr key={train.train_id}>
+                    <td className="train-id">{train.train_id}</td>
+                    <td>{clock(train.arrival)}</td>
+                    <td>{clock(train.departure)}</td>
+                    <td>
+                      <span className="platform">
+                        {train.platform || "Unassigned"}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4}>
+                    {backendOnline
+                      ? "No trains in the current timetable."
+                      : "Timetable unavailable. Start the backend and refresh."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="actions-grid">
+        <article className="panel">
+          <p className="eyebrow">SCENARIO 01</p>
+          <h3>Simulate train delay</h3>
+          <p className="description">
+            Apply a delay and let the backend process the disruption.
+          </p>
+
+          <label htmlFor="delay-train">Train ID</label>
+          <select
+            id="delay-train"
+            value={trainId}
+            onChange={(event) => setTrainId(event.target.value)}
+            disabled={!trains.length || busy}
+          >
+            {trains.map((train) => (
+              <option key={train.train_id} value={train.train_id}>
+                {train.train_id}
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="delay-minutes">Delay (minutes)</label>
+          <input
+            id="delay-minutes"
+            type="number"
+            min="1"
+            max="1440"
+            value={delay}
+            onChange={(event) => setDelay(Number(event.target.value))}
+            disabled={busy}
+          />
+
+          <button
+            type="button"
+            disabled={
+              !backendOnline || !trains.length || !delayValid || busy
+            }
+            onClick={() =>
+              submit(
+                "/disruptions/delay",
+                { train_id: trainId, delay_minutes: delay },
+                "Delay request completed."
+              )
+            }
+          >
+            {busy ? "Processing…" : "Apply delay →"}
+          </button>
+        </article>
+
+        <article className="panel">
+          <p className="eyebrow">SCENARIO 02</p>
+          <h3>Platform closure</h3>
+          <p className="description">
+            Submit a platform closure interval for the scheduler to evaluate.
+          </p>
+
+          <label htmlFor="closure-platform">Platform</label>
+          <select
+            id="closure-platform"
+            value={platform}
+            onChange={(event) => setPlatform(event.target.value)}
+            disabled={busy}
+          >
+            {PLATFORMS.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="closure-start">Start time (minutes after midnight)</label>
+          <input
+            id="closure-start"
+            type="number"
+            min="0"
+            max="1439"
+            value={start}
+            onChange={(event) => setStart(Number(event.target.value))}
+            disabled={busy}
+          />
+          <p className="field-hint">{clock(start)}</p>
+
+          <label htmlFor="closure-end">End time (minutes after midnight)</label>
+          <input
+            id="closure-end"
+            type="number"
+            min="1"
+            max="1440"
+            value={end}
+            onChange={(event) => setEnd(Number(event.target.value))}
+            disabled={busy}
+          />
+          <p className="field-hint">
+            {end === 1440 ? "24:00" : clock(end)}
+          </p>
+
+          <button
+            type="button"
+            disabled={!backendOnline || !closureValid || busy}
+            onClick={() =>
+              submit(
+                "/disruptions/closure",
+                { platform, start, end },
+                "Closure request completed."
+              )
+            }
+          >
+            {busy ? "Processing…" : "Apply closure →"}
+          </button>
+        </article>
+      </section>
+
+      <section className="actions-grid">
+        <article className="panel">
+          <p className="eyebrow">SAFETY CHECK</p>
+          <h3>Schedule validation</h3>
+          <p className="description">
+            Request independent validation from the backend.
+          </p>
+
+          {conflicts.length > 0 ? (
+            <ul className="conflict-list">
+              {conflicts.map((conflict, index) => (
+                <li key={index}>
+                  {typeof conflict === "string"
+                    ? conflict
+                    : JSON.stringify(conflict)}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="description validation-empty">
+              {loading
+                ? "Loading validation data…"
+                : "No conflicts are currently reported. Run validation to check the timetable."}
+            </p>
+          )}
+
+          <button
+            type="button"
+            className="secondary"
+            disabled={!backendOnline || busy}
+            onClick={validate}
+          >
+            {busy ? "Checking…" : "Validate timetable"}
+          </button>
+        </article>
+
+        <article className="panel">
+          <p className="eyebrow">AUDIT LOG</p>
+          <h3>Disruption history</h3>
+          <p className="description">
+            Events returned by the backend for this session.
+          </p>
+
+          {history.length === 0 ? (
+            <p className="description">
+              {loading
+                ? "Loading history…"
+                : "No disruption records returned."}
+            </p>
+          ) : (
+            <ul className="history-list">
+              {[...history].reverse().map((item, index) => (
+                <li key={`${item.type || "event"}-${index}`}>
+                  <strong>{String(item.type || "EVENT").toUpperCase()}</strong>
+                  <span>
+                    {item.train_id || item.platform || "System"}
+                  </span>
+                  <small>
+                    {item.minutes != null
+                      ? `${item.minutes} min delay`
+                      : item.start != null && item.end != null
+                        ? `${clock(item.start)}–${item.end === 1440 ? "24:00" : clock(item.end)}`
+                        : "Event recorded"}
+                  </small>
+                </li>
+              ))}
+            </ul>
+          )}
+        </article>
+      </section>
+
+      <footer>
+        RAILFLOW · HACKATHON SIMULATION · NOT FOR LIVE RAILWAY OPERATIONS
+      </footer>
+    </main>
+  );
 }
