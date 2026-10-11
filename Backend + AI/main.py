@@ -31,7 +31,8 @@ app.add_middleware(
 # Times are minutes after midnight.
 # ==================================================
 
-platforms = ["P1", "P2", "P3"]
+platforms = ["P1", "P2", "P3", "P4", "P5", "P6"]
+
 
 trains = [
     {
@@ -62,12 +63,70 @@ trains = [
         "departure": 685,
         "platform": "P1",
     },
+    {
+        "train_id": "RA201",
+        "train_name": "Intercity Express",
+        "arrival": 605,
+        "departure": 620,
+        "platform": "P4",
+    },
+    {
+        "train_id": "RA202",
+        "train_name": "Coastal Passenger",
+        "arrival": 615,
+        "departure": 630,
+        "platform": "P5",
+    },
+    {
+        "train_id": "RA203",
+        "train_name": "Western Corridor Express",
+        "arrival": 625,
+        "departure": 640,
+        "platform": "P6",
+    },
+    {
+        "train_id": "RA204",
+        "train_name": "Regional Express",
+        "arrival": 650,
+        "departure": 665,
+        "platform": "P2",
+    },
+    {
+        "train_id": "RA205",
+        "train_name": "Overnight Mail (Demo)",
+        "arrival": 660,
+        "departure": 675,
+        "platform": "P4",
+    },
+    {
+        "train_id": "RA206",
+        "train_name": "Southbound Intercity",
+        "arrival": 680,
+        "departure": 695,
+        "platform": "P5",
+    },
+    {
+        "train_id": "RA207",
+        "train_name": "Airport Connector (Demo)",
+        "arrival": 690,
+        "departure": 705,
+        "platform": "P3",
+    },
+    {
+        "train_id": "RA208",
+        "train_name": "Regional Passenger (Demo)",
+        "arrival": 700,
+        "departure": 715,
+        "platform": "P6",
+    },
 ]
+
 
 history = []
 MINIMUM_GAP = 5
 closures = []
 history = []
+
 
 
 # ==================================================
@@ -404,3 +463,150 @@ def validate():
 @app.get("/history")
 def get_history():
     return {"history": history}
+# ---- RAILFLOW SIMULATED TRAIN TRACKING ----
+
+import time
+
+TRACKING_STARTED_AT = time.monotonic()
+
+# A demonstration network around the Pune area.
+# These are illustrative map coordinates, NOT the routes or locations
+# of the real trains whose numbers/names may appear in the timetable.
+TRACKING_STATIONS = [
+    {
+        "id": "west",
+        "name": "West Junction",
+        "lat": 18.5000,
+        "lng": 73.8000,
+        "x": 40,
+        "y": 110,
+    },
+    {
+        "id": "central",
+        "name": "Central Station",
+        "lat": 18.5200,
+        "lng": 73.8300,
+        "x": 180,
+        "y": 110,
+    },
+    {
+        "id": "east",
+        "name": "East Terminal",
+        "lat": 18.5400,
+        "lng": 73.8700,
+        "x": 320,
+        "y": 110,
+    },
+    {
+        "id": "south",
+        "name": "South Junction",
+        "lat": 18.4900,
+        "lng": 73.8500,
+        "x": 180,
+        "y": 230,
+    },
+]
+
+TRACKING_ROUTES = [
+    {
+        "id": "blue",
+        "name": "Main Line",
+        "color": "#60a5fa",
+        "stations": ["west", "central", "east"],
+    },
+    {
+        "id": "green",
+        "name": "South Line",
+        "color": "#34d399",
+        "stations": ["west", "central", "south", "east"],
+    },
+]
+
+
+def tracking_position(progress, route_stations):
+    """Interpolate a position along a sequence of station coordinates."""
+    progress = max(0.0, min(0.999999, progress))
+
+    segment_count = len(route_stations) - 1
+    scaled = progress * segment_count
+    segment_index = min(int(scaled), segment_count - 1)
+    fraction = scaled - segment_index
+
+    start = route_stations[segment_index]
+    end = route_stations[segment_index + 1]
+
+    return {
+        "lat": start["lat"] + (end["lat"] - start["lat"]) * fraction,
+        "lng": start["lng"] + (end["lng"] - start["lng"]) * fraction,
+        "x": start["x"] + (end["x"] - start["x"]) * fraction,
+        "y": start["y"] + (end["y"] - start["y"]) * fraction,
+        "from_station": start["name"],
+        "to_station": end["name"],
+        "segment_progress": round(fraction, 3),
+    }
+
+
+@app.get("/tracking")
+def get_tracking():
+    """
+    Return simulated train positions based on the current timetable.
+
+    This endpoint does not provide real railway GPS positions.
+    """
+    elapsed = time.monotonic() - TRACKING_STARTED_AT
+
+    station_lookup = {
+        station["id"]: station for station in TRACKING_STATIONS
+    }
+
+    train_positions = []
+
+    # Read the current timetable, not a separate hardcoded train list.
+    for index, train in enumerate(trains):
+        route = TRACKING_ROUTES[index % len(TRACKING_ROUTES)]
+
+        route_stations = [
+            station_lookup[station_id]
+            for station_id in route["stations"]
+        ]
+
+        # Each train follows the same deterministic 120-second demo cycle,
+        # with a different starting offset.
+        progress = ((elapsed / 120.0) + index * 0.19) % 1.0
+        position = tracking_position(progress, route_stations)
+
+        arrival = train.get("arrival")
+        departure = train.get("departure")
+
+        train_positions.append({
+            "train_id": str(train["train_id"]),
+            "train_name": train.get("train_name", "Train"),
+            "platform": train.get("platform"),
+            "arrival": arrival,
+            "departure": departure,
+            "arrival_time": (
+                f"{int(arrival) // 60 % 24:02d}:{int(arrival) % 60:02d}"
+                if arrival is not None else None
+            ),
+            "departure_time": (
+                f"{int(departure) // 60 % 24:02d}:{int(departure) % 60:02d}"
+                if departure is not None else None
+            ),
+            "route_id": route["id"],
+            "route_name": route["name"],
+            "route_color": route["color"],
+            "progress": round(progress, 4),
+            "position": position,
+            "status": "SIMULATED",
+            "next_station": position["to_station"],
+            "simulation_only": True,
+        })
+
+    return {
+        "mode": "simulation",
+        "simulation_only": True,
+        "elapsed_seconds": round(elapsed, 1),
+        "stations": TRACKING_STATIONS,
+        "routes": TRACKING_ROUTES,
+        "trains": train_positions,
+    }

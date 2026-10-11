@@ -1,3 +1,4 @@
+import TrackingPanel from "./TrackingPanel.jsx";
 import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 
@@ -251,7 +252,7 @@ export default function App() {
           🚆
         </div>
       </section>
-
+      <TrackingPanel />
       {message && (
         <div
           className={`notice ${messageType}`}
