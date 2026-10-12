@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node.js
+node_modules/
+
+# Environment secrets
+.env
+.env.*
+
+# Nested duplicate project
+/RailFlow/
+
+# Editors and operating systems
+.DS_Store
+Thumbs.db
