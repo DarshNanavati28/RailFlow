@@ -5,7 +5,7 @@ from engine_bridge import replan, simulate_disruption
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
+import os
 from typing import Literal
 
 
@@ -34,13 +34,23 @@ app = FastAPI(
     version="1.2.0",
 )
 
+frontend_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "FRONTEND_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=frontend_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # ---------------------------------------------------------------------------
 # DEMO DATA — illustrative timetable only; not an official/live Pune timetable
