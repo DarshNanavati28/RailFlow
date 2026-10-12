@@ -663,3 +663,116 @@
 @media (prefers-reduced-motion: reduce) {
   .moving-ring, .route-overlay path { animation: none; }
 }
+/* RailFlow mobile refinements */
+.tracking-panel,
+.disruption-console {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.tracking-panel {
+  width: calc(100% - 32px);
+}
+
+.tracking-layout,
+.tracking-map-column,
+.tracked-train-list {
+  min-width: 0;
+}
+
+.schematic-map svg,
+.yard-schematic svg {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+
+@media (max-width: 600px) {
+  .tracking-panel {
+    width: calc(100% - 20px);
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .tracking-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tracking-stats > div {
+    min-width: 0;
+    padding: 12px;
+  }
+
+  .tracking-stats strong {
+    font-size: clamp(18px, 5vw, 23px);
+    overflow-wrap: anywhere;
+  }
+
+  .tracking-header {
+    gap: 12px;
+  }
+
+  .tracking-header h3 {
+    font-size: 19px;
+  }
+
+  .simulation-badge {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .schematic-map {
+    min-height: 220px;
+    padding: 6px;
+  }
+
+  .schematic-map svg,
+  .yard-schematic svg {
+    max-height: 360px;
+  }
+
+  .map-legend {
+    gap: 10px;
+  }
+
+  .tracked-list-heading {
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+
+  .tracked-train-row {
+    padding: 12px;
+  }
+
+  .train-details {
+    padding: 14px;
+  }
+
+  .detail-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 380px) {
+  .tracking-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tracking-panel {
+    padding: 11px;
+  }
+
+  .tracking-header h3 {
+    font-size: 17px;
+  }
+
+  .view-switch {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .view-switch button {
+    padding: 8px 10px;
+  }
+}

@@ -717,3 +717,65 @@ footer {
     padding: 12px;
   }
 }
+/* Responsive RailFlow application shell */
+.app-container,
+.app-content {
+  width: 100%;
+  min-width: 0;
+}
+
+.app-content {
+  padding: clamp(8px, 2vw, 20px);
+}
+
+.topbar {
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.brand {
+  min-width: 0;
+}
+
+.user-controls {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  .topbar {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .brand h1 {
+    font-size: 21px;
+  }
+
+  .brand span {
+    max-width: 100%;
+    line-height: 1.5;
+  }
+
+  .user-controls {
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .app-content {
+    padding: 8px 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .user-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .logout-button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
